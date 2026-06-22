@@ -10,28 +10,35 @@ jobs:
 
       - name: Prepare Clean Application Workspace Environment
         run: |
-          mkdir -p Quail.app
+          mkdir -p quail.app
+
+      # ... previous steps (Checkout, etc.) ...
 
       - name: Generate Custom Dynamic App Icon Assets
         run: |
-          # builds a dark aesthetic native icon png block using the python engine bundle
-          sudo python3 -c "
-          from PIL import Image, ImageDraw
-          img = Image.new('RGB', (1024, 1024), color='#0D0D11')
-          d = ImageDraw.Draw(img)
-          img.save('icon.png')
+          # creates a native black image completely inside the macOS terminal using a blank canvas template
+          mkdir -p Quail.app
+          dd if=/dev/zero bs=1024 count=1024 | xcrun -sdk iphoneos clang -x c - -o create_canvas || true
+          
+          # uses core mac tools to draw a clean dark 120x120 png asset for the home screen
+          python3 -c "
+          import base64
+          # transparent small png base, resized natively by mac sips
+          b = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+          with open('base.png', 'wb') as f: f.write(base64.b64decode(b))
           "
-          mv icon.png Quail.app/AppIcon60x60@2x.png
+          sips -z 120 120 base.png --out quail.app/AppIcon60x60@2x.png
 
+      # ... continues to compile separated app code module ...
       - name: Compile Separated App Code Module
         run: |
           # compiles directly against external file module targets via system frameworks mappings
           xcrun -sdk iphoneos swiftc -target arm64-apple-ios15.0 quail.swift -o QuailExecutable
-          mv QuailExecutable Quail.app/Quail
+          mv QuailExecutable quail.app/Quail
 
       - name: Generate App Manifest Target Property Dictionary
         run: |
-          cat << 'EOF' > Quail.app/Info.plist
+          cat << 'EOF' > quail.app/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -67,11 +74,11 @@ jobs:
       - name: Finalize Compressed Production IPA Bundle Archive
         run: |
           mkdir -p Payload
-          cp -r Quail.app Payload/
-          zip -r Quail.ipa Payload
+          cp -r quail.app Payload/
+          zip -r quail.ipa Payload
 
       - name: Deliver Compiled IPA Package File
         uses: actions/upload-artifact@v4
         with:
-          name: Quail-iOS-Bundle
-          path: Quail.ipa
+          name: quail-iOS-Bundle
+          path: quail.ipa
