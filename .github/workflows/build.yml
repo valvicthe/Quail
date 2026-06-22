@@ -16,18 +16,15 @@ jobs:
 
       - name: Generate Custom Dynamic App Icon Assets
         run: |
-          # creates a native black image completely inside the macOS terminal using a blank canvas template
-          mkdir -p Quail.app
-          dd if=/dev/zero bs=1024 count=1024 | xcrun -sdk iphoneos clang -x c - -o create_canvas || true
           
-          # uses core mac tools to draw a clean dark 120x120 png asset for the home screen
-          python3 -c "
-          import base64
-          # transparent small png base, resized natively by mac sips
-          b = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-          with open('base.png', 'wb') as f: f.write(base64.b64decode(b))
-          "
-          sips -z 120 120 base.png --out quail.app/AppIcon60x60@2x.png
+          # silently captures a tiny blank corner of the virtual display
+          screencapture -R 0,0,10,10 raw_patch.png
+          
+          # uses native sips tool to process the patch into a clean 120x120 solid icon
+          sips -z 120 120 raw_patch.png --setProp "colorspace" "RGB" --out quail.app/AppIcon60x60@2x.png
+          
+          # clean up the temporary workspace file
+          rm raw_patch.png
 
       # ... continues to compile separated app code module ...
       - name: Compile Separated App Code Module
