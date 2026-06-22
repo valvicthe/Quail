@@ -1,0 +1,77 @@
+name: Generate Quail IPA
+on: [workflow_dispatch, push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Clean Application Workspace Environment
+        run: |
+          mkdir -p Quail.app
+
+      - name: Generate Custom Dynamic App Icon Assets
+        run: |
+          # builds a dark aesthetic native icon png block using the python engine bundle
+          sudo python3 -c "
+          from PIL import Image, ImageDraw
+          img = Image.new('RGB', (1024, 1024), color='#0D0D11')
+          d = ImageDraw.Draw(img)
+          img.save('icon.png')
+          "
+          mv icon.png Quail.app/AppIcon60x60@2x.png
+
+      - name: Compile Separated App Code Module
+        run: |
+          # compiles directly against external file module targets via system frameworks mappings
+          xcrun -sdk iphoneos swiftc -target arm64-apple-ios15.0 quail.swift -o QuailExecutable
+          mv QuailExecutable Quail.app/Quail
+
+      - name: Generate App Manifest Target Property Dictionary
+        run: |
+          cat << 'EOF' > Quail.app/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>quail</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.quail.app</string>
+              <key>CFBundleName</key>
+              <string>quail</string>
+              <key>CFBundleIconFiles</key>
+              <array>
+                  <string>AppIcon60x60</string>
+              </array>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>UIBackgroundModes</key>
+              <array>
+                  <string>audio</string>
+              </array>
+              <key>NSAppleMusicUsageDescription</key>
+              <string>quail needs permissions to stream audio files from your music library container.</string>
+              <key>UILaunchStoryboardName</key>
+              <string></string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Finalize Compressed Production IPA Bundle Archive
+        run: |
+          mkdir -p Payload
+          cp -r Quail.app Payload/
+          zip -r Quail.ipa Payload
+
+      - name: Deliver Compiled IPA Package File
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quail-iOS-Bundle
+          path: Quail.ipa
