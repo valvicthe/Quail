@@ -10,28 +10,20 @@ jobs:
 
       - name: Prepare Clean Application Workspace Environment
         run: |
+          # using purely lowercase folder names to prevent windows extraction bugs
           mkdir -p quail.app
-
-      # ... previous steps (Checkout, etc.) ...
 
       - name: Generate Custom Dynamic App Icon Assets
         run: |
-          
-          # silently captures a tiny blank corner of the virtual display
           screencapture -R 0,0,10,10 raw_patch.png
-          
-          # uses native sips tool to process the patch into a clean 120x120 icon without extra flags
-          sips -z 120 120 raw_patch.png --out quail.app/AppIcon60x60@2x.png
-          
-          # clean up the temporary workspace file
+          sips -z 120 120 raw_patch.png --out quail.app/icon60x60@2x.png
           rm raw_patch.png
 
-      # ... continues to compile separated app code module ...
       - name: Compile Separated App Code Module
         run: |
-          # compiles directly against external file module targets via system frameworks mappings
-          xcrun -sdk iphoneos swiftc -target arm64-apple-ios15.0 quail.swift -o QuailExecutable
-          mv QuailExecutable quail.app/Quail
+          # compile binary matching the exact lowercase target name
+          xcrun -sdk iphoneos swiftc -target arm64-apple-ios15.0 quail.swift -o quail
+          mv quail quail.app/quail
 
       - name: Generate App Manifest Target Property Dictionary
         run: |
@@ -43,12 +35,12 @@ jobs:
               <key>CFBundleExecutable</key>
               <string>quail</string>
               <key>CFBundleIdentifier</key>
-              <string>com.quail.app</string>
+              <string>com.quail.musicplayer</string>
               <key>CFBundleName</key>
               <string>quail</string>
               <key>CFBundleIconFiles</key>
               <array>
-                  <string>AppIcon60x60</string>
+                  <string>icon60x60</string>
               </array>
               <key>CFBundleVersion</key>
               <string>1</string>
@@ -77,5 +69,5 @@ jobs:
       - name: Deliver Compiled IPA Package File
         uses: actions/upload-artifact@v4
         with:
-          name: quail-iOS-Bundle
+          name: Quail-iOS-Bundle
           path: quail.ipa
